@@ -94,9 +94,9 @@ async function modify(data: string): Promise<string | undefined> {
             });
         }
         if (snippets) {
-            _.each(snippets, (key, snippet) => {
+            _.forEach(snippets, (snippet, key) => {
                 const elem = html.children.find((e => e.tagName === key));
-                if (elem) elem.children.push(snippet);
+                if (elem) snippet.forEach((x) => elem.children.push(x));
             });
         }
         return require('himalaya/translate').toHTML(json);
