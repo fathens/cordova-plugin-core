@@ -19,15 +19,14 @@ gulp.task('build', function() {
 });
 
 gulp.task('build:scripts', function() {
-    const tsProject = ts.createProject('scripts/src/tsconfig.json', function() {
-        typescript: require('typescript');
-    });
     const head = `#!/usr/bin/env node
 
 `;
 
     return gulp.src('scripts/src/*.ts')
-        .pipe(tsProject())
+        .pipe(ts({
+            target: 'es6'
+        }))
         .pipe(babel({
             presets: ['es2015']
         }))
