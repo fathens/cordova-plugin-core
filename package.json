@@ -7,7 +7,7 @@
   "scripts": {
     "build": "gulp",
     "watch": "gulp watch",
-    "preinstall": "gulp build:scripts"
+    "preinstall": "gulp build:scripts",
     "postinstall": "gulp build"
   },
   "bin": {
