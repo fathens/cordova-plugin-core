@@ -10,12 +10,9 @@ gulp.task('build', function() {
         typescript: require('typescript');
     });
 
-    gulp.src('src/*.ts')
+    return tsProject.src()
         .pipe(tsProject())
-        .pipe(babel({
-            presets: ['es2015']
-        }))
-        .pipe(gulp.dest('dist'));
+        .pipe(gulp.dest(tsProject.options.outDir));
 });
 
 gulp.task('build:scripts', function() {
@@ -40,7 +37,7 @@ gulp.task('watch', function() {
 });
 
 gulp.task('clean', function() {
-    return gulp.src('dist/*', { read: false }).pipe(clean());
+    return gulp.src('dist', { read: false }).pipe(clean());
 });
 
 gulp.task('watch:scripts', ['scripts'], function() {
