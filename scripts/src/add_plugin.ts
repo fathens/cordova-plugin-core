@@ -48,14 +48,19 @@ type PluginXml = {
     }
 }
 
+async function repo_url(): Promise<string> {
+    const package_json = JSON.parse(await fs.readFile('./package.json', 'utf-8'));
+    const url: string = package_json.repository.url;
+    const version: string = package_json.version;
+    return `${url}#version/${version}`;
+}
+
 async function modify(config: ConfigXml) {
     const plugin = (await read_xml<PluginXml>('./plugin.xml')).plugin;
     const plugin_id = plugin.$.id;
     const variable_names = plugin.preference ? plugin.preference.map((pref) => pref.$.name) : [];
 
-    const package_json = JSON.parse(await fs.readFile('./package.json', 'utf-8'));
-    const gitrepo: string = package_json.repository.url;
-
+    const gitrepo = await repo_url();
     console.log(`plugin_id=${plugin_id}, repo=${gitrepo}`);
 
     const found = config.widget.plugin ? config.widget.plugin.find((x) => x.$.name === plugin_id) : null;
