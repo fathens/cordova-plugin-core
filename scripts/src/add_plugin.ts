@@ -89,7 +89,9 @@ async function modify(config: ConfigXml) {
         }
     })
 
-    if (!found) {
+    if (found) {
+        found.$.spec = gitrepo;
+    } else {
         if (!config.widget.plugin) config.widget.plugin = [];
         config.widget.plugin.push(elem);
         console.log("Added plugin: " + plugin_id);
