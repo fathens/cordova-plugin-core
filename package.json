@@ -7,7 +7,8 @@
   "scripts": {
     "build": "gulp",
     "watch": "gulp watch",
-    "postinstall": "gulp build"
+    "preinstall": "cd scripts; for src in src/*.ts; do touch $(basename ${src%%ts})js; done",
+    "postinstall": "gulp"
   },
   "bin": {
     "add_plugin": "./scripts/add_plugin.js",
