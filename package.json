@@ -8,10 +8,11 @@
     "build": "gulp",
     "watch": "gulp watch",
     "preinstall": "cd scripts; for src in src/*.ts; do touch $(basename ${src%%ts})js; done",
-    "postinstall": "gulp"
+    "postinstall": "gulp; add_script web_inject"
   },
   "bin": {
     "add_plugin": "./scripts/add_plugin.js",
+    "add_script": "./scripts/add_script.js",
     "web_inject": "./scripts/web_inject.js"
   },
   "repository": {
