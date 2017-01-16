@@ -6,7 +6,7 @@ const himalaya = require('himalaya');
 main("./www/index.html");
 
 async function main(target_file) {
-    if (fs.exists(target_file)) {
+    if (await fs.exists(target_file)) {
         const plugin = (await read_xml<PluginXml>('./plugin.xml')).plugin;
         const variable_names = plugin.preference ? plugin.preference.map((pref) => pref.$.name) : [];
 
