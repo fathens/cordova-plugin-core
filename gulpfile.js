@@ -42,8 +42,8 @@ gulp.task('clean', function() {
     return gulp.src('dist', { read: false }).pipe(clean());
 });
 
-gulp.task('watch:scripts', ['scripts'], function() {
-    gulp.watch('scripts/src/*.ts', ['scripts']);
+gulp.task('watch:scripts', ['build:scripts'], function() {
+    gulp.watch('scripts/src/*.ts', ['build:scripts']);
 });
 
 gulp.task('clean:scripts', function() {
