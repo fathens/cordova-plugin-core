@@ -1,0 +1,44 @@
+{
+  "name": "@cordova-plugin/core",
+  "version": "0.1.0",
+  "description": "Package organizer for Cordova Plugins",
+  "main": "dist/index.js",
+  "typings": "dist/index",
+  "scripts": {
+    "build": "gulp",
+    "watch": "gulp watch",
+    "preinstall": "cd scripts; for src in src/*.ts; do touch $(basename ${src%%ts})js; done",
+    "postinstall": "gulp"
+  },
+  "bin": {
+    "add_plugin": "./scripts/add_plugin.js",
+    "web_inject": "./scripts/web_inject.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fathens/cordova-plugin-core.git"
+  },
+  "author": "f:athens",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^7.0.0",
+    "@types/xml2js": "0.0.32",
+    "async-file": "^2.0.2",
+    "babel-polyfill": "^6.20.0",
+    "babel-preset-es2015": "^6.18.0",
+    "gulp": "^3.9.1",
+    "gulp-babel": "^6.1.2",
+    "gulp-change": "^1.0.0",
+    "gulp-chmod": "^2.0.0",
+    "gulp-clean": "^0.3.2",
+    "gulp-typescript": "^3.1.4",
+    "himalaya": "^0.2.2",
+    "xml2js": "^0.4.17"
+  },
+  "devDependencies": {
+    "typescript": "~2.0.10"
+  },
+  "peerDependencies": {
+    "typescript": "~2.0.10"
+  }
+}
