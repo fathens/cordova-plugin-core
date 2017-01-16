@@ -22,7 +22,9 @@ gulp.task('build:scripts', function() {
 
     return gulp.src('scripts/src/*.ts')
         .pipe(ts({
-            target: 'es6'
+            target: 'es6',
+            moduleResolution: 'node',
+            strictNullChecks: true
         }))
         .pipe(babel({
             presets: ['es2015']
