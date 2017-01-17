@@ -52,7 +52,8 @@ async function repo_url(): Promise<string> {
     const package_json = JSON.parse(await fs.readFile('./package.json', 'utf-8'));
     const url: string = package_json.repository.url;
     const version: string = package_json.version;
-    return `${url}#version/${version}`;
+    const m = url.match(/git\+(https.+\.git)$/);
+    return `${m ? m[1] : url}#version/${version}`;
 }
 
 async function modify(config: ConfigXml) {
