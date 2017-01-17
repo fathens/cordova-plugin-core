@@ -1,6 +1,6 @@
 {
   "name": "@cordova-plugin/core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Package organizer for Cordova Plugins",
   "main": "dist/index.js",
   "typings": "dist/index",
