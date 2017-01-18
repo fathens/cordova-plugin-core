@@ -11,8 +11,8 @@
     "postinstall": "gulp; add_hook prestart web_inject"
   },
   "bin": {
+    "add_hook": "./scripts/add_hook.js",
     "add_plugin": "./scripts/add_plugin.js",
-    "add_script": "./scripts/add_script.js",
     "web_inject": "./scripts/web_inject.js"
   },
   "repository": {
