@@ -1,22 +1,26 @@
 import 'babel-polyfill';
+import * as _ from 'lodash';
 import * as fs from 'async-file';
 import * as xml2js from 'xml2js';
+const himalaya = require('himalaya');
 const glob = require('glob');
 const path = require('path');
 
 console.log(`Working on ${process.cwd()}`);
 
-main('./config.xml');
+main('./config.xml', './www/index.html');
 
-async function main(target_file) {
-    if (await fs.exists(target_file)) {
-        const config_xml = await read_xml<ConfigXml>(target_file);
-        const modified = await modify(config_xml);
-
-        await fs.writeFile(target_file, modified);
-        console.log(`Wrote to ${target_file}`);
+async function main(config_xml: string, index_html: string) {
+    if (await fs.exists(config_xml)) {
+        await add_plugin(config_xml);
     } else {
-        console.log("No target: " + target_file);
+        console.log(`${config_xml} does not exist. Try to inject to index.html.`);
+
+        if (await fs.exists(index_html)) {
+            await web_inject(index_html);
+        } else {
+            console.log(`${index_html} does not exist. do nothing.`);
+        }
     }
 }
 
@@ -38,7 +42,9 @@ async function sorted_plugins(): Promise<PluginInfo[]> {
     return dst_list;
 }
 
-async function modify(config: ConfigXml): Promise<string> {
+async function add_plugin(target_file: string): Promise<void> {
+    const config = await read_xml<ConfigXml>(target_file);
+
     const plugins = await sorted_plugins();
     console.log(`Adding plugins: ${plugins}`);
 
@@ -65,8 +71,90 @@ async function modify(config: ConfigXml): Promise<string> {
         };
     });
     config.widget.plugin = left.concat(addings);
+
     const builder = new xml2js.Builder();
-    return builder.buildObject(config);
+    const modified = builder.buildObject(config);
+
+    await fs.writeFile(target_file, modified);
+    console.log(`Wrote to ${target_file}`);
+}
+
+async function web_inject(target_file: string): Promise<void> {
+    const content = await fs.readFile(target_file, 'utf-8');
+
+    async function find_snippets(): Promise<{ [key: string]: any}> {
+        const result = {};
+        const files = glob.sync('node_modules/@cordova-plugin/*/www/index-*.snippet.html');
+        const promises = files.map(async (file) => {
+            const key = file.match(/.*\/index-(\w+)\.snippet\.html$/)[1]
+            result[key] = himalaya.parse(await fs.readFile(file, 'utf-8'));
+        });
+        await Promise.all(promises);
+        return result;
+    }
+
+    async function find_variables(): Promise<string[]> {
+        const infos = await sorted_plugins();
+        return infos.map((info) => info.web_variables).reduce((a, b) => {
+            return a.concat(b);
+        }).filter((x, i, self) => {
+            return self.indexOf(x) === i;
+        });
+    }
+
+    async function variable_lines(): Promise<string | null> {
+        const variable_names = await find_variables();
+        if (variable_names.length < 1) return null;
+
+        const tab = ' '.repeat(4);
+        const lines = variable_names.map((key) => {
+            const value = process.env[key];
+            if (!value) throw `Unknown environment variable: ${key}`;
+            return `${tab}const ${key} = '${value}';`;
+        }).join('\n');
+        return `\n${lines}\n`;
+    }
+
+    async function modify(data: string): Promise<string | undefined> {
+        const json = himalaya.parse(data);
+
+        const html = json.find((e) => e.tagName === 'html');
+        function get_element(name): (any | null) {
+            return html.children.find((e) => e.tagName === name);
+        }
+
+        const vals = await variable_lines();
+        const snippets = await find_snippets();
+
+        if (vals || snippets) {
+            if (vals) {
+                const head = get_element('head');
+                if (head) head.children.push({
+                    tagName: "script",
+                    type: "Element",
+                    attributes: {
+                        type: 'text/javascript',
+                    },
+                    content: await variable_lines()
+                });
+            }
+            if (snippets) {
+                _.forEach(snippets, (snippet, key) => {
+                    const elem = html.children.find((e => e.tagName === key));
+                    if (elem) snippet.forEach((x) => elem.children.push(x));
+                });
+            }
+            return require('himalaya/translate').toHTML(json);
+        }
+    }
+
+    const result = await modify(content);
+    if (result) {
+        await fs.writeFile(target_file, result, 'utf-8');
+        console.log(`Wrote to '${target_file}'`);
+    } else {
+        console.log(`No need to modify '${target_file}'`);
+    }
 }
 
 function read_xml<T>(path): Promise<T> {
@@ -92,9 +180,11 @@ class PluginInfo {
         plugin.platform.forEach((p) => {
             deps.concat(p.dependency || []);
         });
-        const vals = plugin.preference ? plugin.preference.map((x) => x.$.name) : [];
 
-        return new PluginInfo(plugin.$.id, spec, deps.map((e) => e.$.id), vals);
+        const vals = plugin.preference ? plugin.preference.map((x) => x.$.name) : [];
+        const webs = plugin.preference ? plugin.preference.filter((x) => x.$.web).map((x) => x.$.name) : [];
+
+        return new PluginInfo(plugin.$.id, spec, deps.map((e) => e.$.id), vals, webs);
     }
 
     static async plugin_spec(plugin_dir: string): Promise<string> {
@@ -112,7 +202,8 @@ class PluginInfo {
         readonly id: string,
         readonly spec: string,
         readonly deps: string[],
-        readonly variables: string[]
+        readonly variables: string[],
+        readonly web_variables: string[]
     ) {
     }
 
@@ -121,7 +212,8 @@ class PluginInfo {
             id: this.id,
             spec: this.spec,
             deps: this.deps,
-            variables: this.variables
+            variables: this.variables,
+            web_variables: this.web_variables
         }, null, 4)})`;
     }
 }
@@ -150,7 +242,8 @@ type PluginXml = {
         },
         preference?: {
             $: {
-                name: string
+                name: string,
+                web: boolean
             }
         }[],
         dependency?: {
