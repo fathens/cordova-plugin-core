@@ -5,7 +5,7 @@ console.log(`Working on ${process.cwd()}`);
 
 const hook_name = process.argv[2];
 const hook_code = process.argv[3];
-console.log(`Adding scripts['${hook_name}'] <- '${hook_code}'`);
+console.log(`Adding hook['${hook_name}'] <- '${hook_code}'`);
 
 main("../../../node_modules/.hooks");
 

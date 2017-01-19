@@ -1,6 +1,6 @@
 {
   "name": "@cordova-plugin/core",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Package organizer for Cordova Plugins",
   "main": "dist/index.js",
   "typings": "dist/index",
@@ -8,12 +8,11 @@
     "build": "gulp",
     "watch": "gulp watch",
     "preinstall": "cd scripts; for src in src/*.ts; do touch $(basename ${src%%ts})js; done",
-    "postinstall": "gulp; add_hook prestart web_inject; add_hook prebuild add_plugin"
+    "postinstall": "gulp; add_hook postbuild inject_plugins"
   },
   "bin": {
     "add_hook": "./scripts/add_hook.js",
-    "add_plugin": "./scripts/add_plugin.js",
-    "web_inject": "./scripts/web_inject.js"
+    "inject_plugins": "./scripts/inject_plugins.js",
   },
   "repository": {
     "type": "git",
