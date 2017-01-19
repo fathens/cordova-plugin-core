@@ -1,10 +1,12 @@
 import 'babel-polyfill';
 import * as fs from 'async-file';
 import * as xml2js from 'xml2js';
+const glob = require('glob');
+const path = require('path');
 
 console.log(`Working on ${process.cwd()}`);
 
-main('../../../config.xml');
+main('./config.xml');
 
 async function main(target_file) {
     if (await fs.exists(target_file)) {
@@ -48,29 +50,39 @@ type PluginXml = {
     }
 }
 
-async function repo_url(): Promise<string> {
-    const package_json = JSON.parse(await fs.readFile('./package.json', 'utf-8'));
-    const url: string = package_json.repository.url;
-    const version: string = package_json.version;
-    const m = url.match(/git\+(https.+\.git)$/);
-    return `${m ? m[1] : url}#version/${version}`;
+async function plugin_spec(plugin_dir: string): Promise<string> {
+    const package_json = JSON.parse(await fs.readFile(path.join(plugin_dir, 'package.json'), 'utf-8'));
+    const spec: string = package_json._requested.spec;
+    const m = spec.match(/^(github):(\w+\/.+)$/);
+    if (m) {
+        return `https://${m[1]}.com/${m[2]}`;
+    } else {
+        return spec;
+    }
 }
 
-async function modify(config: ConfigXml) {
-    const plugin = (await read_xml<PluginXml>('./plugin.xml')).plugin;
+async function modify_each(config: ConfigXml, plugin_xml_file: string): Promise<void> {
+    const plugin = (await read_xml<PluginXml>(plugin_xml_file)).plugin;
     const plugin_id = plugin.$.id;
     const variable_names = plugin.preference ? plugin.preference.map((pref) => pref.$.name) : [];
 
-    const gitrepo = await repo_url();
-    console.log(`plugin_id=${plugin_id}, repo=${gitrepo}`);
+    const spec = await plugin_spec(path.dirname(plugin_xml_file));
+    console.log(`plugin_id=${plugin_id}, spec=${spec}`);
 
     const found = config.widget.plugin ? config.widget.plugin.find((x) => x.$.name === plugin_id) : null;
     const elem = found || {
         $: {
             name: plugin_id,
-            spec: gitrepo
+            spec: spec
         }
     };
+    if (found) {
+        found.$.spec = spec;
+    } else {
+        if (!config.widget.plugin) config.widget.plugin = [];
+        config.widget.plugin.push(elem);
+        console.log("Added plugin: " + plugin_id);
+    }
 
     variable_names.forEach((key) => {
         const value: string = process.env[key];
@@ -89,15 +101,12 @@ async function modify(config: ConfigXml) {
             })
         }
     })
+}
 
-    if (found) {
-        found.$.spec = gitrepo;
-    } else {
-        if (!config.widget.plugin) config.widget.plugin = [];
-        config.widget.plugin.push(elem);
-        console.log("Added plugin: " + plugin_id);
-    }
-
+async function modify(config: ConfigXml): Promise<string> {
+    const files = glob.sync('node_modules/@cordova-plugin/*/plugin.xml');
+    const promises = files.map((file) => modify_each(config, file));
+    await Promise.all(promises);
     const builder = new xml2js.Builder();
     return builder.buildObject(config);
 }
