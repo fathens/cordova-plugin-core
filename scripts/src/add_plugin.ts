@@ -135,3 +135,8 @@ function read_xml<T>(path): Promise<T> {
         });
     });
 }
+
+class PluginInfo {
+    constructor(readonly id: string, readonly spec: string, readonly deps: string[]) {
+    }
+}
