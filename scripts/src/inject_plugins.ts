@@ -14,7 +14,7 @@ async function main(config_xml: string, index_html: string) {
     if (await fs.exists(config_xml)) {
         await add_plugin(config_xml);
     } else {
-        console.log(`${config_xml} does not exist. Try to inject to index.html.`);
+        console.log(`${config_xml} does not exist. Try to inject to ${index_html}.`);
 
         if (await fs.exists(index_html)) {
             await web_inject(index_html);
@@ -39,6 +39,7 @@ async function sorted_plugins(): Promise<PluginInfo[]> {
     }
     src_list.forEach((a) => push_one(a));
 
+    console.log(`Injecting plugins: ${dst_list}`);
     return dst_list;
 }
 
@@ -46,7 +47,6 @@ async function add_plugin(target_file: string): Promise<void> {
     const config = await read_xml<ConfigXml>(target_file);
 
     const plugins = await sorted_plugins();
-    console.log(`Adding plugins: ${plugins}`);
 
     const left = (config.widget.plugin || []).filter((x) => {
         return !plugins.find((a) => a.id == x.$.name);
