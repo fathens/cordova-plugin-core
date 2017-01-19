@@ -62,63 +62,51 @@ type PluginXml = {
     }
 }
 
-async function plugin_spec(plugin_dir: string): Promise<string> {
-    const package_json = JSON.parse(await fs.readFile(path.join(plugin_dir, 'package.json'), 'utf-8'));
-    const spec: string = package_json._requested.spec;
-    const m = spec.match(/^(github):(\w+\/.+)$/);
-    if (m) {
-        return `https://${m[1]}.com/${m[2]}`;
-    } else {
-        return spec;
+async function sorted_plugins(): Promise<PluginInfo[]> {
+    const files = glob.sync('node_modules/@cordova-plugin/*/plugin.xml');
+    const promises: Promise<PluginInfo>[] = files.map((file) => PluginInfo.readFile(file));
+    const src_list = await Promise.all(promises);
+
+    const dst_list: PluginInfo[] = [];
+    function push_one(src: PluginInfo | undefined) {
+        if (src && !dst_list.find((x) => x.id == src.id)) {
+            const deps = src.deps.map((id) => src_list.find((x) => x.id == id));
+            deps.forEach((a) => push_one(a));
+            dst_list.push(src);
+        }
     }
+    src_list.forEach((a) => push_one(a));
+
+    return dst_list;
 }
 
-async function modify_each(config: ConfigXml, plugin_xml_file: string): Promise<void> {
-    const plugin = (await read_xml<PluginXml>(plugin_xml_file)).plugin;
-    const plugin_id = plugin.$.id;
-    const variable_names = plugin.preference ? plugin.preference.map((pref) => pref.$.name) : [];
+async function modify(config: ConfigXml): Promise<string> {
+    const plugins = await sorted_plugins();
+    console.log(`Adding plugins: ${plugins}`);
 
-    const spec = await plugin_spec(path.dirname(plugin_xml_file));
-    console.log(`plugin_id=${plugin_id}, spec=${spec}`);
-
-    const found = config.widget.plugin ? config.widget.plugin.find((x) => x.$.name === plugin_id) : null;
-    const elem = found || {
-        $: {
-            name: plugin_id,
-            spec: spec
-        }
-    };
-    if (found) {
-        found.$.spec = spec;
-    } else {
-        if (!config.widget.plugin) config.widget.plugin = [];
-        config.widget.plugin.push(elem);
-        console.log("Added plugin: " + plugin_id);
-    }
-
-    variable_names.forEach((key) => {
-        const value: string = process.env[key];
-        if (!value) throw `Unknown environment variable: ${key}`;
-
-        const found = elem.variable ? elem.variable.find((x) => x.$.name === key) : null;
-        if (found) {
-            found.$.value = value;
-        } else {
-            if (!elem.variable) elem.variable = [];
-            elem.variable.push({
+    const left = (config.widget.plugin || []).filter((x) => {
+        return !plugins.find((a) => a.id == x.$.name);
+    });
+    const addings = plugins.map((info) => {
+        const vals = info.variables.map((key) => {
+            const value: string = process.env[key];
+            if (!value) throw `Unknown environment variable: ${key}`;
+            return {
                 $: {
                     name: key,
                     value: value
                 }
-            })
-        }
-    })
-}
-
-async function modify(config: ConfigXml): Promise<string> {
-    const files = glob.sync('node_modules/@cordova-plugin/*/plugin.xml');
-    const promises = files.map((file) => modify_each(config, file));
-    await Promise.all(promises);
+            };
+        });
+        return {
+            $: {
+                name: info.id,
+                spec: info.spec
+            },
+            variable: vals
+        };
+    });
+    config.widget.plugin = left.concat(addings);
     const builder = new xml2js.Builder();
     return builder.buildObject(config);
 }
@@ -137,6 +125,45 @@ function read_xml<T>(path): Promise<T> {
 }
 
 class PluginInfo {
-    constructor(readonly id: string, readonly spec: string, readonly deps: string[]) {
+    static async readFile(file: string): Promise<PluginInfo> {
+        console.log(`Reading plugin: ${file}`);
+        const plugin = (await read_xml<PluginXml>(file)).plugin;
+        const spec = await PluginInfo.plugin_spec(path.dirname(file));
+
+        const deps = plugin.dependency || [];
+        plugin.platform.forEach((p) => {
+            deps.concat(p.dependency || []);
+        });
+        const vals = plugin.preference ? plugin.preference.map((x) => x.$.name) : [];
+
+        return new PluginInfo(plugin.$.id, spec, deps.map((e) => e.$.id), vals);
+    }
+
+    static async plugin_spec(plugin_dir: string): Promise<string> {
+        const package_json = JSON.parse(await fs.readFile(path.join(plugin_dir, 'package.json'), 'utf-8'));
+        const spec: string = package_json._requested.spec;
+        const m = spec.match(/^(github):(\w+\/.+)$/);
+        if (m) {
+            return `https://${m[1]}.com/${m[2]}`;
+        } else {
+            return spec;
+        }
+    }
+
+    constructor(
+        readonly id: string,
+        readonly spec: string,
+        readonly deps: string[],
+        readonly variables: string[]
+    ) {
+    }
+
+    toString(): string {
+        return `Plugin(${JSON.stringify({
+            id: this.id,
+            spec: this.spec,
+            deps: this.deps,
+            variables: this.variables
+        }, null, 4)})`;
     }
 }
