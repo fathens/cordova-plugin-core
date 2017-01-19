@@ -20,48 +20,6 @@ async function main(target_file) {
     }
 }
 
-type ConfigXml = {
-    widget: {
-        plugin?: {
-            $: {
-                name: string,
-                spec: string
-            },
-            variable?: {
-                $: {
-                    name: string,
-                    value: string
-                }
-            }[]
-        }[]
-    }
-}
-
-type PluginXml = {
-    plugin: {
-        $: {
-            id: string
-        },
-        preference?: {
-            $: {
-                name: string
-            }
-        }[],
-        dependency?: {
-            $: {
-                id: string
-            }
-        }[],
-        platform: {
-            dependency?: {
-                $: {
-                    id: string
-                }
-            }[]
-        }[]
-    }
-}
-
 async function sorted_plugins(): Promise<PluginInfo[]> {
     const files = glob.sync('node_modules/@cordova-plugin/*/plugin.xml');
     const promises: Promise<PluginInfo>[] = files.map((file) => PluginInfo.readFile(file));
@@ -165,5 +123,47 @@ class PluginInfo {
             deps: this.deps,
             variables: this.variables
         }, null, 4)})`;
+    }
+}
+
+type ConfigXml = {
+    widget: {
+        plugin?: {
+            $: {
+                name: string,
+                spec: string
+            },
+            variable?: {
+                $: {
+                    name: string,
+                    value: string
+                }
+            }[]
+        }[]
+    }
+}
+
+type PluginXml = {
+    plugin: {
+        $: {
+            id: string
+        },
+        preference?: {
+            $: {
+                name: string
+            }
+        }[],
+        dependency?: {
+            $: {
+                id: string
+            }
+        }[],
+        platform: {
+            dependency?: {
+                $: {
+                    id: string
+                }
+            }[]
+        }[]
     }
 }
