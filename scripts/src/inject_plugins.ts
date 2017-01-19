@@ -182,7 +182,10 @@ class PluginInfo {
         });
 
         const vals = plugin.preference ? plugin.preference.map((x) => x.$.name) : [];
-        const webs = plugin.preference ? plugin.preference.filter((x) => x.$.web).map((x) => x.$.name) : [];
+        const webs = plugin.preference ? plugin.preference.filter((x) => {
+            const web = x.$.web;
+            return web && web.toLowerCase() == "true"
+        }).map((x) => x.$.name) : [];
 
         return new PluginInfo(plugin.$.id, spec, deps.map((e) => e.$.id), vals, webs);
     }
@@ -243,7 +246,7 @@ type PluginXml = {
         preference?: {
             $: {
                 name: string,
-                web: boolean
+                web: string
             }
         }[],
         dependency?: {
