@@ -12,7 +12,7 @@
   },
   "bin": {
     "add_hook": "./scripts/add_hook.js",
-    "inject_plugins": "./scripts/inject_plugins.js",
+    "inject_plugins": "./scripts/inject_plugins.js"
   },
   "repository": {
     "type": "git",
