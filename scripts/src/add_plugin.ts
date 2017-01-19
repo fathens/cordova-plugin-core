@@ -41,11 +41,23 @@ type PluginXml = {
     plugin: {
         $: {
             id: string
-        }
+        },
         preference?: {
             $: {
                 name: string
             }
+        }[],
+        dependency?: {
+            $: {
+                id: string
+            }
+        }[],
+        platform: {
+            dependency?: {
+                $: {
+                    id: string
+                }
+            }[]
         }[]
     }
 }
