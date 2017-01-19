@@ -8,7 +8,7 @@
     "build": "gulp",
     "watch": "gulp watch",
     "preinstall": "cd scripts; for src in src/*.ts; do touch $(basename ${src%%ts})js; done",
-    "postinstall": "gulp; add_hook prestart web_inject; add_hook prebuild add_plugin"
+    "postinstall": "gulp; add_hook postbuild inject_plugins"
   },
   "bin": {
     "add_hook": "./scripts/add_hook.js",
