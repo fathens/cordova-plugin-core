@@ -135,7 +135,7 @@ async function web_inject(target_file: string): Promise<void> {
                     attributes: {
                         type: 'text/javascript',
                     },
-                    content: await variable_lines()
+                    content: vals
                 });
             }
             if (snippets) {
