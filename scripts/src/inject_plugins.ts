@@ -115,6 +115,24 @@ async function web_inject(target_file: string): Promise<void> {
         return `\n${lines}\n`;
     }
 
+    async function find_unlinked(parent): Promise<boolean> {
+        const removed: any[] = [];
+        const promises = parent.children.map(async (e) => {
+            if (e.tagName == "script" && e.attributes) {
+                const src = "./www/" + e.attributes.src;
+                if (await fs.exists(src)) {
+                    return e;
+                } else {
+                    removed.push(e);
+                    return null;
+                }
+            }
+            return e;
+        });
+        parent.children = (await Promise.all(promises)).filter((x) => x !== null);
+        return removed.length > 0;
+    }
+
     async function modify(data: string): Promise<string | undefined> {
         const json = himalaya.parse(data);
 
@@ -124,29 +142,12 @@ async function web_inject(target_file: string): Promise<void> {
         }
         const head = get_element('head');
 
-        async function find_unlinked(): Promise<boolean> {
-            const removed = [];
-            const promises = head.children.map(async (e) => {
-                if (e.tagName == "script" && e.attributes) {
-                    const src = "./www/" + e.attributes.src;
-                    if (await fs.exists(src)) {
-                        return e;
-                    } else {
-                        removed.push(e);
-                        return null;
-                    }
-                }
-                return e;
-            });
-            head.children = await Promise.all(promises);
-            return !removed.isEmpty();
-        }
-
-        const unlinked = await find_unlinked();
+        const unlinked_head = await find_unlinked(head);
+        const unlinked_body = await find_unlinked(get_element('body'));
         const vals = await variable_lines();
         const snippets = await find_snippets();
 
-        if (unlinked || vals || snippets) {
+        if (unlinked_head || unlinked_body || vals || snippets) {
             if (vals) {
                 if (head) head.children.push({
                     tagName: "script",
