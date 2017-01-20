@@ -122,13 +122,32 @@ async function web_inject(target_file: string): Promise<void> {
         function get_element(name): (any | null) {
             return html.children.find((e) => e.tagName === name);
         }
+        const head = get_element('head');
 
+        async function find_unlinked(): Promise<boolean> {
+            const removed = [];
+            const promises = head.children.map(async (e) => {
+                if (e.tagName == "script" && e.attributes) {
+                    const src = "./www/" + e.attributes.src;
+                    if (await fs.exists(src)) {
+                        return e;
+                    } else {
+                        removed.push(e);
+                        return null;
+                    }
+                }
+                return e;
+            });
+            head.children = await Promise.all(promises);
+            return !removed.isEmpty();
+        }
+
+        const unlinked = await find_unlinked();
         const vals = await variable_lines();
         const snippets = await find_snippets();
 
-        if (vals || snippets) {
+        if (unlinked || vals || snippets) {
             if (vals) {
-                const head = get_element('head');
                 if (head) head.children.push({
                     tagName: "script",
                     type: "Element",
